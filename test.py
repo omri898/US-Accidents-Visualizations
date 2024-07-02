@@ -51,7 +51,9 @@ def map_viz(df,color_feature):
             '3': '#E74C3C',
             '4': '#17202A'
         }
-        df['Severity'] = df['Severity'].astype(str)
+        # CHANGED
+        # df['Severity'] = df['Severity'].astype(str)
+        df.loc[:, 'Severity'] = df['Severity'].astype(str)
 
     elif color_feature == "Hour":
         color_scale = ['#000000', '#00001a', '#000033', '#00004d', '#000066', '#990000', '#e62e00', '#ff8000',
@@ -699,8 +701,11 @@ data = pd.read_csv("data/US_Accidents_March23_sampled_500k.csv",low_memory=False
 data['Start_Time'] = data['Start_Time'].apply(lambda x: x.split('.')[0] if '.' in x else x)
 data['End_Time'] = data['End_Time'].apply(lambda x: x.split('.')[0] if '.' in x else x)
 # Convert the datetime columns to datetime object
-data['Start_Time'] = pd.to_datetime(data['Start_Time'], format='%Y-%m-%d %H:%M:%S')
-data['End_Time'] = pd.to_datetime(data['End_Time'], format='%Y-%m-%d %H:%M:%S')
+# CHANGED
+data['Start_Time'] = pd.to_datetime(data['Start_Time'], format='%d/%m/%Y', dayfirst=True)
+data['End_Time'] = pd.to_datetime(data['End_Time'], format='%d/%m/%Y', dayfirst=True)
+# data['Start_Time'] = pd.to_datetime(data['Start_Time'], format='%Y-%m-%d %H:%M:%S')
+# data['End_Time'] = pd.to_datetime(data['End_Time'], format='%Y-%m-%d %H:%M:%S')
 # Create Date & Time Features
 data['Year'] = data['Start_Time'].dt.year
 data['Month'] = data['Start_Time'].dt.month
