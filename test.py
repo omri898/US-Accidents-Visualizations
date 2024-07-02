@@ -540,8 +540,8 @@ def time_and_corona_trend_plot(df,states,lock_dates):
 
     # Step 1: Convert the 'Start_Time' and lockdown date columns to datetime format
     lockdown_df['Start_Time'] = pd.to_datetime(lockdown_df['Start_Time'], errors='coerce')
-    lockdown_df['Lockdown_Start_Date'] = pd.to_datetime(lockdown_df['Lockdown_Start_Date'], errors='coerce')
-    lockdown_df['Lockdown_End_Date'] = pd.to_datetime(lockdown_df['Lockdown_End_Date'], errors='coerce')
+    lockdown_df['Lockdown_Start_Date'] = pd.to_datetime(lockdown_df['Lockdown_Start_Date'], errors='coerce', dayfirst=True)
+    lockdown_df['Lockdown_End_Date'] = pd.to_datetime(lockdown_df['Lockdown_End_Date'], errors='coerce', dayfirst=True)
 
     # Drop rows with NaT in 'Start_Time' after conversion
     lockdown_df = lockdown_df.dropna(subset=['Start_Time'])
@@ -565,8 +565,11 @@ def time_and_corona_trend_plot(df,states,lock_dates):
         (lockdown_df['State'].isin(states_and_city)) | (lockdown_df['City'] == 'Kansas City')]
 
     # Step 4: Aggregate the data by location, month/year, and severity group to get the count of accidents
-    lockdown_df_filtered['Location'] = lockdown_df_filtered.apply(
+    # CHANGED
+    lockdown_df_filtered.loc[:, 'Location'] = lockdown_df_filtered.apply(
         lambda x: x['City'] if x['City'] == 'Kansas City' else x['State'], axis=1)
+    # lockdown_df_filtered['Location'] = lockdown_df_filtered.apply(
+    #     lambda x: x['City'] if x['City'] == 'Kansas City' else x['State'], axis=1)
     accidents_per_month_year_severity = lockdown_df_filtered.groupby(
         ['Location', 'Month_Year', 'Severity_Group']).size().reset_index(name='Accident_Count')
 
@@ -702,8 +705,8 @@ data['Start_Time'] = data['Start_Time'].apply(lambda x: x.split('.')[0] if '.' i
 data['End_Time'] = data['End_Time'].apply(lambda x: x.split('.')[0] if '.' in x else x)
 # Convert the datetime columns to datetime object
 # CHANGED
-data['Start_Time'] = pd.to_datetime(data['Start_Time'], format='%d/%m/%Y', dayfirst=True)
-data['End_Time'] = pd.to_datetime(data['End_Time'], format='%d/%m/%Y', dayfirst=True)
+data['Start_Time'] = pd.to_datetime(data['Start_Time'], format='%Y-%m-%d %H:%M:%S', dayfirst=True)
+data['End_Time'] = pd.to_datetime(data['End_Time'], format='%Y-%m-%d %H:%M:%S', dayfirst=True)
 # data['Start_Time'] = pd.to_datetime(data['Start_Time'], format='%Y-%m-%d %H:%M:%S')
 # data['End_Time'] = pd.to_datetime(data['End_Time'], format='%Y-%m-%d %H:%M:%S')
 # Create Date & Time Features
