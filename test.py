@@ -4,6 +4,8 @@ import streamlit as st
 # Common:
 import pandas as pd
 import numpy as np
+import statistics
+
 
 # Visualization
 import plotly.express as px
@@ -51,9 +53,7 @@ def map_viz(df,color_feature):
             '3': '#E74C3C',
             '4': '#17202A'
         }
-        # CHANGED
-        # df['Severity'] = df['Severity'].astype(str)
-        df.loc[:, 'Severity'] = df['Severity'].astype(str)
+        df['Severity'] = df['Severity'].astype(str)
 
     elif color_feature == "Hour":
         color_scale = ['#000000', '#00001a', '#000033', '#00004d', '#000066', '#990000', '#e62e00', '#ff8000',
@@ -313,7 +313,7 @@ def sign_plot(df, list_of_signs):
         legend=dict(
             orientation='h',
             yanchor='bottom',
-            y=-0.1,  # Adjust y position of the legend
+            y=-0.15,  # Adjust y position of the legend
             xanchor='center',
             x=0.5
         ),
@@ -322,8 +322,6 @@ def sign_plot(df, list_of_signs):
     return fig
 
 def categorical_weather_plot(df,x_feature):
-    rate_threshold = 0
-
     # Extract the date from 'Start_Time'
     df['Date'] = df['Start_Time'].dt.date
 
@@ -337,6 +335,10 @@ def categorical_weather_plot(df,x_feature):
 
     # Normalize the accident counts
     merged_df['Accident_Rate'] = merged_df['Accidents'] / merged_df['Unique_Days']
+
+    # Threshold Calculation
+    rate_threshold = statistics.median(merged_df['Accident_Rate'].tolist())
+
     merged_df = merged_df[merged_df['Accident_Rate'] >= rate_threshold]
 
     # Sort the dataframe by the normalized accident rate in descending order
@@ -540,8 +542,8 @@ def time_and_corona_trend_plot(df,states,lock_dates):
 
     # Step 1: Convert the 'Start_Time' and lockdown date columns to datetime format
     lockdown_df['Start_Time'] = pd.to_datetime(lockdown_df['Start_Time'], errors='coerce')
-    lockdown_df['Lockdown_Start_Date'] = pd.to_datetime(lockdown_df['Lockdown_Start_Date'], errors='coerce', dayfirst=True)
-    lockdown_df['Lockdown_End_Date'] = pd.to_datetime(lockdown_df['Lockdown_End_Date'], errors='coerce', dayfirst=True)
+    lockdown_df['Lockdown_Start_Date'] = pd.to_datetime(lockdown_df['Lockdown_Start_Date'], errors='coerce')
+    lockdown_df['Lockdown_End_Date'] = pd.to_datetime(lockdown_df['Lockdown_End_Date'], errors='coerce')
 
     # Drop rows with NaT in 'Start_Time' after conversion
     lockdown_df = lockdown_df.dropna(subset=['Start_Time'])
@@ -565,11 +567,8 @@ def time_and_corona_trend_plot(df,states,lock_dates):
         (lockdown_df['State'].isin(states_and_city)) | (lockdown_df['City'] == 'Kansas City')]
 
     # Step 4: Aggregate the data by location, month/year, and severity group to get the count of accidents
-    # CHANGED
-    lockdown_df_filtered.loc[:, 'Location'] = lockdown_df_filtered.apply(
+    lockdown_df_filtered['Location'] = lockdown_df_filtered.apply(
         lambda x: x['City'] if x['City'] == 'Kansas City' else x['State'], axis=1)
-    # lockdown_df_filtered['Location'] = lockdown_df_filtered.apply(
-    #     lambda x: x['City'] if x['City'] == 'Kansas City' else x['State'], axis=1)
     accidents_per_month_year_severity = lockdown_df_filtered.groupby(
         ['Location', 'Month_Year', 'Severity_Group']).size().reset_index(name='Accident_Count')
 
@@ -694,6 +693,8 @@ def time_and_corona_trend_plot(df,states,lock_dates):
     )
 
     return fig
+
+
 ################################################################## Read Data ##################################################################
 
 ############## read data into dataframe ##############
@@ -704,11 +705,8 @@ data = pd.read_csv("data/US_Accidents_March23_sampled_500k.csv",low_memory=False
 data['Start_Time'] = data['Start_Time'].apply(lambda x: x.split('.')[0] if '.' in x else x)
 data['End_Time'] = data['End_Time'].apply(lambda x: x.split('.')[0] if '.' in x else x)
 # Convert the datetime columns to datetime object
-# CHANGED
-data['Start_Time'] = pd.to_datetime(data['Start_Time'], format='%Y-%m-%d %H:%M:%S', dayfirst=True)
-data['End_Time'] = pd.to_datetime(data['End_Time'], format='%Y-%m-%d %H:%M:%S', dayfirst=True)
-# data['Start_Time'] = pd.to_datetime(data['Start_Time'], format='%Y-%m-%d %H:%M:%S')
-# data['End_Time'] = pd.to_datetime(data['End_Time'], format='%Y-%m-%d %H:%M:%S')
+data['Start_Time'] = pd.to_datetime(data['Start_Time'], format='%Y-%m-%d %H:%M:%S')
+data['End_Time'] = pd.to_datetime(data['End_Time'], format='%Y-%m-%d %H:%M:%S')
 # Create Date & Time Features
 data['Year'] = data['Start_Time'].dt.year
 data['Month'] = data['Start_Time'].dt.month
@@ -769,7 +767,7 @@ lock_dates = pd.read_csv('data/US_Lockdown_Dates.csv')
 st.sidebar.header("Settings")
 
 # Date Ranges
-start_date = st.sidebar.date_input("Start date", pd.to_datetime("01/01/2022", format='%d/%m/%Y'))
+start_date = st.sidebar.date_input("Start date", pd.to_datetime("01/01/2017", format='%d/%m/%Y'))
 end_date = st.sidebar.date_input("End date", pd.to_datetime("31/12/2022", format='%d/%m/%Y'))
 
 # Visualization Selector
@@ -794,14 +792,16 @@ st.markdown("Note that the dataset used for this USA traffic accidents dashboard
 st.markdown("We recommend using data from the years 2017 to 2022 inclusive, as data for the years 2016 and 2023 is partially recorded.")
 st.markdown("Use the sidebar on the left to:\n"
             "1. Select the range of data (affects all except the holidays plot and corona plot due to constraints)\n"
-            "2. Select visualizations to display\n")
+            "2. Select visualizations to display\n"
+            "3. Hide the sidebar")
 
-st.markdown("Most plots except one (The over tieme trend with corona lockdowns plot) allow dynamic interactions with the plot.")
 st.markdown("The dynamic capabilities include:\n"
             "1. Clicking and double clicking on elements in the legend to hide or show elements.\n"
             "2. Clicking and draging on the plot to select specific regions to focus on in the plot\n"
             "3. Use mouse in the map plot to move and zoom in and out\n"
             "4. Double clicking on a plot to resting it to initial state.",unsafe_allow_html=True)
+
+st.markdown("\n\n !!!!!!!!!!! If the dashboard is in dark mode, change it to light mode by pressing the 3 dots on the top right and going into settings !!!!!!!!!!! \n\n",unsafe_allow_html=True)
 
 st.header("Dashboard",divider='gray')
 
@@ -870,7 +870,7 @@ if "Weather & Traffic Accidents" in visualizations:
     st.markdown("Question: Are the weather conditions that have increased accident rates in them ?")
 
     st.markdown(
-        "The following plot shows the normalized traffic accident rates during each of the weather conditions.\n",unsafe_allow_html=True)
+        "The following plot shows the normalized traffic accident rates during each of the weather conditions.\nNote that only weather conditions that have a greater rate then the midean are shown,",unsafe_allow_html=True)
 
     fig = categorical_weather_plot(data,"Weather_Condition")
     st.plotly_chart(fig)
@@ -899,9 +899,9 @@ if "Over Time Trends Including Coronavirus Lockdowns" in visualizations:
 
     st.markdown("Question: Is there a trend in the number of traffic accidents over the years, and how have coronavirus lockdowns impacted this trend?")
 
-    st.markdown(
-        "The following plot depicts the number of accidents over the years, highlighting visible lockdown start and end dates.\n"
-        "Due to different lockdown periods in each state, viewing the plot for all states may not provide significant insights. It is recommended to select a specific state from the dropdown on the left to view its plot.",unsafe_allow_html=True)
+    st.markdown("The following plot depicts the number of accidents over the years, highlighting visible lockdown start and end dates. "
+                "Due to different lockdown periods in each state, viewing the plot for all states may not provide significant insights. It is recommended to select a specific state from the dropdown on the left to view its plot.",unsafe_allow_html=True)
+    st.markdown("The plot is zoomed in from the start and can be zoomed out by double clicking.",unsafe_allow_html=True)
 
     fig = time_and_corona_trend_plot(data,states,lock_dates)
     st.plotly_chart(fig)
